@@ -1,0 +1,54 @@
+! waypoint cosmetic rules.
+!
+! This hides the containers that the network blocklist leaves behind: an ad slot
+! whose request was cancelled is still a reserved rectangle of empty page, and a
+! page laid out around it looks broken rather than clean.
+!
+! Syntax — deliberately three forms, nothing more:
+!
+!   ##selector          hide it on every page
+!   host##selector      hide it on that host and its subdomains
+!   host#@#selector     never hide it there, even if a rule above says to
+!
+! `!` starts a comment, and so does a line that begins with a single `#` (only `##`
+! can begin a rule). Anything else is ignored, so a typo costs nothing but the rule
+! it was on. Comments in this file use `!`: an earlier version was commented with
+! `#`, and its legend line `#   host##selector` parsed as a host named `#   host`,
+! which is why the startup line counted three host rule sets for a list of one.
+!
+! Curated by hand rather than downloaded: a cosmetic list from upstream carries
+! thousands of site-specific rules, and every one of them is a selector this app
+! would then be injecting into pages nobody here visits. Add a rule when a site
+! you actually use shows a gap, and pause a host from its sidebar row when a rule
+! hides something you wanted.
+
+! --- generic ad containers -------------------------------------------------
+##.adsbygoogle
+##ins.adsbygoogle
+##[data-ad-slot]
+##[id^="google_ads_"]
+##[id^="div-gpt-ad"]
+##[id^="ad-slot-"]
+##[class^="ad-slot-"]
+##.ad-slot
+##.ad-container
+##.ad-banner
+##.advert
+##.advertisement
+##.sponsored-content
+##[aria-label="Advertisement"]
+
+! Third-party ad frames, when the request itself was served from cache or allowed
+##iframe[src*="doubleclick.net"]
+##iframe[src*="googlesyndication.com"]
+##iframe[src*="adservice.google"]
+
+! --- site-specific containers ----------------------------------------------
+youtube.com##ytd-promoted-sparkles-web-renderer
+youtube.com##ytd-display-ad-renderer
+youtube.com##ytd-ad-slot-renderer
+youtube.com##ytd-in-feed-ad-layout-renderer
+
+! --- exceptions ------------------------------------------------------------
+! Gmail's own layout uses data-ad-slot on a wrapper; hiding it collapses the inbox.
+mail.google.com#@#[data-ad-slot]

@@ -1,0 +1,763 @@
+:root {
+  --zoom: 1;
+  --bg: #0f0e0d;
+  --grid-line: rgba(255, 255, 255, 0.045);
+  --chrome: #1c1a18;
+  --chrome-active: #24211e;
+  --ink: #ece7e0;
+  --ink-dim: #9a938a;
+  --accent: #4a90e2;
+  --danger: #e2604a;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--ink);
+  font: 13px/1.4 -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+#canvas {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  cursor: default;
+  touch-action: none;
+  /* `--theme-gradient` is written by applyTheme() from the workspace theme. The
+     fallback is the plain canvas colour, so a renderer that has not painted a theme
+     yet looks like the app always did instead of flashing transparent. */
+  background: var(--theme-gradient, var(--bg));
+}
+
+/* Grain: under the grid, the zones and the tiles, and transparent to the pointer.
+   A grain layer that took events would end marquee selection and panning silently,
+   which is why it is `pointer-events: none` rather than merely behind everything. */
+#canvas-grain {
+  position: absolute;
+  inset: 0;
+  opacity: var(--theme-grain-opacity, 0);
+  pointer-events: none;
+}
+
+#canvas-grain svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  mix-blend-mode: overlay;
+}
+
+#canvas.panning {
+  cursor: grab;
+}
+
+#canvas.panning {
+  cursor: grabbing;
+}
+
+#grid {
+  position: absolute;
+  inset: -50%;
+  pointer-events: none;
+  background-image:
+    linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
+  background-repeat: repeat;
+}
+
+#tiles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+#hint {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  color: var(--ink-dim);
+  pointer-events: none;
+  max-width: 420px;
+}
+
+#hint[hidden] {
+  display: none;
+}
+
+.hint-title {
+  margin: 0 0 8px;
+  font-size: 15px;
+  color: var(--ink);
+  letter-spacing: 0.02em;
+}
+
+#hint p {
+  margin: 4px 0;
+}
+
+.hint-sub {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+kbd {
+  font: inherit;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* ------------------------------------------------------------------ tiles */
+
+.tile {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  background: var(--chrome);
+  border-radius: 10px;
+  /* The page view paints over everything below the title bar; these shadows are
+     what gives a tile its elevation against the canvas. */
+  box-shadow:
+    0 16px 36px rgba(0, 0, 0, 0.18),
+    0 2px 6px rgba(0, 0, 0, 0.08);
+  transition: box-shadow 140ms ease, outline-color 120ms ease;
+  will-change: transform;
+}
+
+.tile.dragging,
+.tile.resizing {
+  box-shadow:
+    0 24px 54px rgba(0, 0, 0, 0.34),
+    0 4px 10px rgba(0, 0, 0, 0.16);
+}
+
+.tile.dragging {
+  cursor: grabbing;
+}
+
+.tile-selected {
+  outline: 2px dashed var(--accent);
+  outline-offset: 3px;
+  box-shadow:
+    0 22px 46px rgba(0, 0, 0, 0.3),
+    0 3px 8px rgba(0, 0, 0, 0.12);
+}
+
+.tile.failed {
+  outline: 2px solid rgba(226, 96, 74, 0.7);
+  outline-offset: 2px;
+}
+
+/* ------------------------------------------------------------- title bar */
+
+.tile-chrome {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px;
+  min-height: 0;
+  border-radius: 10px 10px 0 0;
+  background: linear-gradient(180deg, var(--chrome-active), var(--chrome));
+  border-bottom: 1px solid rgba(0, 0, 0, 0.5);
+  cursor: grab;
+  user-select: none;
+  overflow: hidden;
+  flex: 0 0 auto;
+}
+
+.tile.dragging .tile-chrome {
+  cursor: grabbing;
+}
+
+/* The dots live inside the drag handle and must stay pressable there: no drag
+   region, its own pointer events, and a stacking order above the bar's text. */
+.lights {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: 0 0 auto;
+  -webkit-app-region: no-drag;
+  pointer-events: auto;
+  /* Above every other thing drawn in the bar (the grip is z-index 3): a light
+     that loses the stacking contest is a light nothing can press. */
+  z-index: 20;
+}
+
+.light {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 11px;
+  height: 11px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  background: #4a4640;
+  transition: background 120ms ease, transform 90ms ease;
+}
+
+/* macOS draws its glyphs only while the pointer is anywhere in the group, so
+   they are decoration until `.lights:hover` resolves them. */
+.light::after {
+  font-size: 7px;
+  font-weight: 800;
+  line-height: 1;
+  color: rgba(20, 12, 8, 0.62);
+  opacity: 0;
+  transition: opacity 90ms ease;
+}
+
+.light.close::after {
+  content: '✕';
+}
+
+.light.collapse::after {
+  content: '−';
+}
+
+.light.zoom::after {
+  content: '+';
+}
+
+.lights:hover .light::after,
+.light:focus-visible::after {
+  opacity: 1;
+}
+
+/* Traffic lights stay muted until the pointer is in the bar, then resolve to
+   their macOS colours — the same affordance as a native window. */
+.tile-chrome:hover .light.close {
+  background: #ff5f57;
+}
+
+.tile-chrome:hover .light.collapse {
+  background: #febc2e;
+}
+
+.tile-chrome:hover .light.zoom {
+  background: #28c840;
+}
+
+.light:active {
+  transform: scale(0.86);
+}
+
+.graph {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1 1 auto;
+  min-width: 0;
+  justify-content: center;
+  padding: 0 4px;
+}
+
+.favicon {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  border-radius: 3px;
+  display: grid;
+  place-items: center;
+  font-size: 9px;
+  font-weight: 600;
+  color: #100f0e;
+  background: hsl(var(--hue, 20) 62% 62%);
+}
+
+.tile-label {
+  font-size: 11.5px;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Container pill. Only a tile that opted out of the shared jar has one, so it
+   reads as an exception rather than as decoration. Amber means "in memory: this
+   login is gone at quit"; slate means a persistent jar of its own. */
+.tile-badge {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  max-width: 96px;
+  padding: 0 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(74, 144, 226, 0.45);
+  background: rgba(74, 144, 226, 0.18);
+  color: #b9d3f2;
+  font-size: 9.5px;
+  font-weight: 600;
+  line-height: 14px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tile-badge.temp {
+  border-color: rgba(226, 160, 74, 0.5);
+  background: rgba(226, 160, 74, 0.18);
+  color: #f0d3a6;
+}
+
+/* `display: inline-flex` above would otherwise defeat the `hidden` attribute. */
+.tile-badge[hidden] {
+  display: none;
+}
+
+.tile.loading .tile-label {
+  color: var(--ink-dim);
+}
+
+.tools {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 0 0 auto;
+}
+
+.ctl {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ink-dim);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.ctl:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.09);
+  color: var(--ink);
+}
+
+.ctl:disabled {
+  opacity: 0.28;
+  cursor: default;
+}
+
+/* Dark mode and the clipper are tile-level actions, so they sit with the navigation
+   controls and take the same 18px box. Both are canvas DOM inside the title bar: the
+   chrome's press handler ignores buttons, which is why they need no drag-region
+   opt-out of their own. */
+.tile-dark-toggle.active {
+  background: rgba(122, 160, 255, 0.22);
+  color: #cfe0ff;
+}
+
+.tile-dark-toggle[aria-pressed='true']:hover {
+  background: rgba(122, 160, 255, 0.32);
+}
+
+/* The star is a bookmark toggle, so the glyph *is* the state: hollow means this page is
+   not saved, filled means it is. Amber rather than the dark-mode blue, because the two
+   buttons sit side by side and a lit star next to a lit moon has to be readable. */
+.tile-bookmark.active {
+  background: rgba(255, 205, 120, 0.2);
+  color: #ffd48a;
+}
+
+.tile-bookmark[aria-pressed='true']:hover {
+  background: rgba(255, 205, 120, 0.3);
+}
+
+/* The clipper answers in place, by swapping its own glyph for a check or a cross:
+   a toast would cover the page it just filed. `font-size: 0` hides the base glyph so
+   the replacement is the only thing drawn, and the swap lasts as long as the class. */
+.tile-clip-obsidian.clip-ok,
+.tile-clip-obsidian.clip-fail {
+  font-size: 0;
+}
+
+.tile-clip-obsidian.clip-ok {
+  color: #5fd08a;
+}
+
+.tile-clip-obsidian.clip-ok::after {
+  content: '✓';
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.tile-clip-obsidian.clip-fail {
+  color: #ff8b7a;
+}
+
+.tile-clip-obsidian.clip-fail::after {
+  content: '✕';
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* Below this width the traffic lights and the tools crowd the title out. */
+.tile.compact .lights {
+  display: none;
+}
+
+.tile.compact .tools .ctl[data-role='back'],
+.tile.compact .tools .ctl[data-role='forward'],
+/* The two tile actions are the first to go: at this width the title is worth more
+   than a button whose state the page itself already shows. */
+.tile.compact .tile-dark-toggle,
+.tile.compact .tile-bookmark,
+.tile.compact .tile-clip-obsidian {
+  display: none;
+}
+
+/* -------------------------------------------------------------- tile body */
+
+.tile-body {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  background: #14120f;
+  border-radius: 0 0 10px 10px;
+  overflow: hidden;
+}
+
+.tile-error {
+  padding: 8px 12px;
+  font-size: 11.5px;
+  text-align: center;
+  color: var(--danger);
+  max-width: 90%;
+  max-height: 100%;
+  overflow: hidden;
+}
+
+/* Collapsed: the frame is the title bar, so nothing may imply a body below it.
+   The page view is hidden in the same tick (see TileRegistry.layout), which is
+   the only way to stop it painting over the bar. */
+.tile.collapsed .tile-body {
+  display: none;
+}
+
+.tile.collapsed .tile-chrome {
+  border-radius: 10px;
+  border-bottom: 0;
+}
+
+.tile.collapsed .resize-grip {
+  display: none;
+}
+
+/* ---------------------------------------------------------------- frames */
+
+/* One stacking layer under every tile: a zone is an annotation, so a page view
+   always paints over it. The body stays pointer-transparent — the canvas has to
+   remain pannable through a zone — and only the header and handle take clicks. */
+#frames {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.frame {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  /* `--frame-color` is written by Frame.applyColor() and always holds a value;
+     `--frame-tint` is the alias these rules read. Each tinted property states a
+     neutral value first so an engine without color-mix keeps a readable zone
+     rather than losing the border entirely. */
+  --frame-tint: var(--frame-color, #7f8ea3);
+  border: 2px dashed rgba(255, 255, 255, 0.14);
+  border: 2px dashed color-mix(in srgb, var(--frame-tint) 42%, transparent);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  background: color-mix(in srgb, var(--frame-tint) 7%, transparent);
+  transition: border-color 120ms ease, background 120ms ease;
+}
+
+.frame.moving,
+.frame.resizing {
+  border-color: var(--frame-tint);
+  background: rgba(255, 255, 255, 0.045);
+  background: color-mix(in srgb, var(--frame-tint) 14%, transparent);
+}
+
+.frame-head {
+  position: absolute;
+  top: 8px;
+  left: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: calc(100% - 24px);
+  height: 22px;
+  padding: 0 9px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-color: color-mix(in srgb, var(--frame-tint) 34%, rgba(255, 255, 255, 0.1));
+  border-radius: 999px;
+  background: rgba(22, 20, 18, 0.86);
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  pointer-events: auto;
+  -webkit-app-region: no-drag;
+  cursor: grab;
+  user-select: none;
+}
+
+/* The header dot is the colour control: the pill it paints in is the colour it
+   sets, so the zone's tint is readable without opening anything. Revealed on
+   hover like the ✕, and faintly present when a colour is set. */
+.frame-color {
+  flex: 0 0 auto;
+  width: 10px;
+  height: 10px;
+  margin-left: -2px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  font-size: 0;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: auto;
+  -webkit-app-region: no-drag;
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.frame-color::before {
+  content: '';
+  display: block;
+  width: 7px;
+  height: 7px;
+  margin: 0 auto;
+  border-radius: 50%;
+  background: var(--frame-tint);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.45);
+}
+
+.frame-color.custom {
+  opacity: 0.6;
+}
+
+.frame:hover .frame-color,
+.frame-color.active {
+  opacity: 1;
+}
+
+.frame-color:hover {
+  transform: scale(1.3);
+}
+
+/* The swatch row shares the header's line, and that placement is load-bearing:
+   a zone's tiles begin exactly FRAME_PADDING_WORLD (48) below its top edge, so
+   anything drawn lower competes with the title bar of the topmost tile — and the
+   tile layer paints above this one. At 1x a row under the header would be
+   half-covered and half-unpressable. It takes pointer events (the body does not)
+   or a press on a swatch would land on the canvas and start a rubberband. */
+.frame-swatches {
+  position: absolute;
+  top: 6px;
+  right: 12px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: rgba(22, 20, 18, 0.95);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+  pointer-events: auto;
+  -webkit-app-region: no-drag;
+}
+
+.frame-swatches[hidden] {
+  display: none;
+}
+
+.frame-swatch {
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  border: 1px solid rgba(0, 0, 0, 0.5);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform 100ms ease;
+}
+
+.frame-swatch:hover {
+  transform: scale(1.18);
+}
+
+.frame-swatch.current {
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.78);
+}
+
+/* "No colour" is hollow on purpose: it has to read as an absence, not a tint. */
+.frame-swatch.none {
+  background: transparent;
+  border: 1px dashed rgba(255, 255, 255, 0.42);
+}
+
+.frame.moving .frame-head {
+  cursor: grabbing;
+}
+
+.frame-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Revealed on hover: a row of ✕ on every zone would read as tiles, not zones. */
+.frame-close {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  margin-left: 2px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink-dim);
+  font-size: 10px;
+  line-height: 16px;
+  text-align: center;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: auto;
+  -webkit-app-region: no-drag;
+  transition: opacity 120ms ease, background 120ms ease, color 120ms ease;
+}
+
+.frame:hover .frame-close {
+  opacity: 1;
+}
+
+.frame-close:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: var(--ink);
+}
+
+.frame-name-input {
+  width: 150px;
+  padding: 0 4px;
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.55);
+  color: var(--ink);
+  font: inherit;
+  outline: none;
+}
+
+.frame-resize {
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--bg);
+  border-radius: 3px;
+  background: var(--frame-tint);
+  pointer-events: auto;
+  -webkit-app-region: no-drag;
+  cursor: nwse-resize;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.frame:hover .frame-resize,
+.frame.resizing .frame-resize {
+  opacity: 1;
+}
+
+/* -------------------------------------------------------- resize grips */
+
+/* Outside the tile box on purpose: the page view covers the body, so a handle
+   drawn inside would never receive the pointerdown that starts a resize. Half of
+   each 10px grip sits over the canvas, which is why it stays pressable. */
+.resize-grip {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  display: none;
+  z-index: 3;
+  border-radius: 3px;
+  background: var(--accent);
+  border: 2px solid var(--bg);
+  pointer-events: auto;
+  -webkit-app-region: no-drag;
+}
+
+.tile-selected .resize-grip {
+  display: block;
+}
+
+.resize-nw {
+  top: -5px;
+  left: -5px;
+  cursor: nwse-resize;
+}
+
+.resize-ne {
+  top: -5px;
+  right: -5px;
+  cursor: nesw-resize;
+}
+
+.resize-sw {
+  bottom: -5px;
+  left: -5px;
+  cursor: nesw-resize;
+}
+
+.resize-se {
+  bottom: -5px;
+  right: -5px;
+  cursor: nwse-resize;
+}
+
+/* ------------------------------------------------------- rubberband select */
+
+/* Drawn over everything, because a box has to stay visible across a tile's title
+   bar as well as the canvas. The z-index is the CSS ceiling on purpose: tile
+   chrome raises itself with an ever-increasing inline z-index (one per press), so
+   any ordinary number here would eventually be outranked by a tile. The element
+   never takes the pointer — it would swallow the drag producing it. */
+#selection-marquee {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2147483647;
+  pointer-events: none;
+  border: 1px dashed var(--accent);
+  border-radius: 4px;
+  background: rgba(74, 144, 226, 0.12);
+  will-change: transform, width, height;
+}
+
+#selection-marquee[hidden] {
+  display: none;
+}

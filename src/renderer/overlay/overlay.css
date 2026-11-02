@@ -1,0 +1,1333 @@
+/*
+ * Chrome styles for three views that share one page: #main (compact HUD,
+ * modals, pan interceptor), #dock and #sidebar. Every view is exactly as large
+ * as the panel it draws, so the page itself must be transparent and must never
+ * lay out beyond the region main gave it.
+ */
+:root {
+  --ink: #ece7e0;
+  --ink-dim: #9a938a;
+  --accent: #4a90e2;
+  --danger: #e2604a;
+  --glass: rgba(28, 26, 24, 0.82);
+  --glass-strong: rgba(20, 18, 16, 0.94);
+  --edge: rgba(255, 255, 255, 0.1);
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: transparent;
+  overflow: hidden;
+  color: var(--ink);
+  font: 12.5px/1.4 -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+#root {
+  height: 100%;
+}
+
+/* -------------------------------------------------- pan interceptor (main) */
+
+#pan-interceptor {
+  position: fixed;
+  inset: 0;
+  /* Inert until main says the pan machine is armed: while inert this view must
+     let every click through to the tile pages beneath it. */
+  pointer-events: none;
+  cursor: default;
+}
+
+body[data-mode='pan'] #pan-interceptor {
+  pointer-events: auto;
+  cursor: grab;
+}
+
+body[data-mode='pan'] #pan-interceptor.grabbing,
+body.grabbing #pan-interceptor {
+  cursor: grabbing;
+}
+
+/* The HUD is a compass while panning, not a target. */
+body[data-mode='pan'] .hud {
+  pointer-events: none;
+  opacity: 0.72;
+}
+
+/* --------------------------------------------------------- compact HUD */
+
+#hud-slot {
+  height: 100%;
+}
+
+.hud {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 100%;
+  padding: 0 12px;
+  border: 1px solid var(--edge);
+  border-radius: 12px;
+  background: var(--glass);
+  backdrop-filter: blur(18px) saturate(140%);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.34);
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.hud:hover {
+  background: var(--glass-strong);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.hud .dot {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 8px rgba(74, 144, 226, 0.7);
+}
+
+.hud .name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+.hud .meta {
+  flex: 0 0 auto;
+  color: var(--ink-dim);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.hud .chev {
+  flex: 0 0 auto;
+  color: var(--ink-dim);
+  font-size: 9px;
+}
+
+/* --------------------------------------------------------------- modals */
+
+.scrim {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(8, 7, 6, 0.42);
+  backdrop-filter: blur(3px);
+}
+
+.panel {
+  width: min(460px, calc(100vw - 64px));
+  max-height: calc(100vh - 96px);
+  overflow: auto;
+  padding: 14px;
+  border: 1px solid var(--edge);
+  border-radius: 14px;
+  background: var(--glass-strong);
+  backdrop-filter: blur(24px) saturate(150%);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+}
+
+.panel.omnibox {
+  width: min(560px, calc(100vw - 64px));
+}
+
+.panel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-dim);
+}
+
+.panel input {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid var(--edge);
+  border-radius: 9px;
+  background: rgba(0, 0, 0, 0.42);
+  color: var(--ink);
+  font: inherit;
+  outline: none;
+}
+
+.panel input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.18);
+}
+
+.save-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.save-row button {
+  flex: 0 0 auto;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--accent);
+  color: #08111d;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ws-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: 280px;
+  overflow: auto;
+}
+
+.ws-list .empty,
+.tile-list .empty {
+  padding: 10px 4px;
+  color: var(--ink-dim);
+  font-size: 11.5px;
+}
+
+.ws {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ws:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.ws.current {
+  background: rgba(74, 144, 226, 0.14);
+}
+
+.badge {
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(74, 144, 226, 0.22);
+  color: #a8cbf5;
+  font-size: 10px;
+}
+
+.hint {
+  margin: 10px 0 0;
+  color: var(--ink-dim);
+  font-size: 11px;
+}
+
+.error {
+  margin: 8px 0 0;
+  color: var(--danger);
+  font-size: 11.5px;
+}
+
+/* ---------------------------------------------------------------- dock */
+
+.dock {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 100%;
+  padding: 0 10px;
+  border: 1px solid var(--edge);
+  border-radius: 16px;
+  background: var(--theme-dock-tint, var(--glass));
+  backdrop-filter: blur(22px) saturate(150%);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.42);
+}
+
+.pill {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  min-width: 34px;
+  height: 34px;
+  padding: 0 9px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--ink-dim);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+.pill:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--ink);
+}
+
+.pill.active {
+  background: rgba(74, 144, 226, 0.2);
+  border-color: rgba(74, 144, 226, 0.5);
+  color: #cfe2fa;
+}
+
+.pill.zoom {
+  min-width: 54px;
+  font-size: 11.5px;
+}
+
+/* "3 tiles": the count and the way to the list in one control. */
+.pill.count {
+  min-width: 58px;
+  font-size: 11.5px;
+}
+
+/* ------------------------------------------------- dock: container chips */
+
+.chips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.chips[hidden] {
+  display: none;
+}
+
+.chip {
+  flex: 0 0 auto;
+  height: 26px;
+  padding: 0 9px;
+  border: 1px solid rgba(74, 144, 226, 0.4);
+  border-radius: 999px;
+  background: rgba(74, 144, 226, 0.16);
+  color: #cfe2fa;
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.chip:hover {
+  background: rgba(74, 144, 226, 0.28);
+}
+
+/* A bookmark suggestion shares the row with the container chips and must not look like
+   one: amber, starred, and truncated, because a page title is longer than a jar name. */
+.chip.bookmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 200px;
+  border-color: rgba(255, 205, 120, 0.4);
+  background: rgba(255, 205, 120, 0.14);
+  color: #ffd48a;
+}
+
+.chip.bookmark:hover {
+  background: rgba(255, 205, 120, 0.26);
+}
+
+.chip-star {
+  font-size: 10px;
+}
+
+.chip-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* While a prefix is being typed the suggestions own the row: the dock is one
+   56px line, so something has to give, and it is the controls. */
+.dock.typing [data-role="tool"],
+.dock.typing [data-role="count"],
+.dock.typing [data-role="zoom"],
+.dock.typing [data-role="fit"] {
+  display: none;
+}
+
+.tool-glyph {
+  font-size: 12px;
+  line-height: 1;
+}
+
+.omnibox-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 34px;
+  padding: 0 8px;
+  border: 1px solid var(--edge);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.36);
+}
+
+.omnibox-wrap:focus-within {
+  border-color: rgba(74, 144, 226, 0.6);
+  box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.14);
+}
+
+.kbd {
+  flex: 0 0 auto;
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--ink-dim);
+  font-size: 10.5px;
+  letter-spacing: 0.02em;
+}
+
+.dock-omnibox {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  outline: none;
+}
+
+.dock-omnibox::placeholder {
+  color: var(--ink-dim);
+}
+
+.go {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: rgba(74, 144, 226, 0.22);
+  color: #cfe2fa;
+  font: inherit;
+  cursor: pointer;
+}
+
+.dock-error {
+  position: fixed;
+  left: 50%;
+  bottom: 64px;
+  transform: translateX(-50%);
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: rgba(226, 96, 74, 0.9);
+  color: #fff;
+  font-size: 11.5px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 160ms ease;
+}
+
+.dock-error.visible {
+  opacity: 1;
+}
+
+/* -------------------------------------------------------------- sidebar */
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  /* The theme's tint, mixed from the canvas's first stop: a sibling view cannot be
+     sampled, so this is a solid colour rather than a real blur of what is behind. */
+  background: var(--theme-sidebar-tint, var(--glass-strong));
+  backdrop-filter: blur(22px) saturate(140%);
+  border-right: 1px solid rgba(0, 0, 0, 0.55);
+}
+
+.sidebar.collapsed {
+  /* Main shrinks the view to a 44x44 rail; only the toggle survives. */
+  background: var(--glass);
+  border-radius: 0 0 12px 0;
+}
+
+.sidebar.collapsed .side-head {
+  padding: 0;
+  justify-content: center;
+  border-bottom: 0;
+}
+
+.sidebar.collapsed .ws-picker,
+.sidebar.collapsed .save-btn,
+.sidebar.collapsed .theme-btn,
+.sidebar.collapsed .ctr-btn,
+.sidebar.collapsed .bk-btn,
+.sidebar.collapsed .layer-btn,
+.sidebar.collapsed .ws-menu,
+.sidebar.collapsed .ctr-menu,
+.sidebar.collapsed .bk-menu,
+.sidebar.collapsed .layer-menu,
+.sidebar.collapsed .theme-host,
+.sidebar.collapsed .tile-list,
+.sidebar.collapsed .side-foot {
+  display: none;
+}
+
+.side-head {
+  display: flex;
+  align-items: center;
+  /* 5px, not 6: the header carries six buttons now and the workspace name still has
+     to be worth reading at 280px (the smoke run asserts the picker's width). */
+  gap: 5px;
+  flex: 0 0 auto;
+  height: 44px;
+  padding: 0 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.rail-toggle,
+.save-btn,
+.theme-btn,
+.ctr-btn,
+.bk-btn,
+.layer-btn {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--ink-dim);
+  font: inherit;
+  cursor: pointer;
+}
+
+.rail-toggle:hover,
+.save-btn:hover,
+.theme-btn:hover,
+.ctr-btn:hover,
+.bk-btn:hover,
+.layer-btn:hover {
+  background: rgba(255, 255, 255, 0.09);
+  color: var(--ink);
+}
+
+.ctr-btn.active,
+.bk-btn.active,
+.layer-btn.active {
+  background: rgba(74, 144, 226, 0.18);
+  color: #cfe2fa;
+}
+
+/* The shelf's own accent: a star that is open is amber, not blue, so the two
+   panels that stay open by accident do not look alike. */
+.bk-btn.active {
+  background: rgba(255, 205, 120, 0.18);
+  color: #ffd48a;
+}
+
+.ws-picker {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.ws-picker:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.ws-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.ws-chev {
+  flex: 0 0 auto;
+  color: var(--ink-dim);
+  font-size: 9px;
+}
+
+.ws-menu {
+  flex: 0 0 auto;
+  max-height: 40%;
+  overflow: auto;
+  padding: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(0, 0, 0, 0.24);
+}
+
+.ws-items {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ws-item {
+  width: 100%;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ws-item:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.ws-item.current {
+  background: rgba(74, 144, 226, 0.16);
+  color: #cfe2fa;
+}
+
+.ws-item.new {
+  color: #cfe2fa;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 7px 7px 0 0;
+  margin-bottom: 2px;
+}
+
+.ws-actions {
+  display: grid;
+  gap: 2px;
+  padding: 2px 0 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  margin-bottom: 4px;
+}
+
+.ws-item.danger {
+  color: #e2836a;
+}
+
+.ws-item.danger:hover {
+  background: rgba(226, 96, 74, 0.16);
+}
+
+.side-error {
+  margin: 0 12px 6px;
+  color: var(--danger);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.side-error[hidden] {
+  display: none;
+}
+
+.ws-name-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 26px;
+  padding: 0 8px;
+  border: 1px solid var(--accent);
+  border-radius: 7px;
+  background: rgba(0, 0, 0, 0.45);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 500;
+  outline: none;
+}
+
+.ws-hint {
+  margin: 6px 4px 0;
+  color: var(--ink-dim);
+  font-size: 10.5px;
+}
+
+.tile-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  overflow: auto;
+}
+
+.tile-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 110ms ease;
+}
+
+.tile-row:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.tile-row.selected {
+  background: rgba(74, 144, 226, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(74, 144, 226, 0.35);
+}
+
+.tile-row.loading {
+  opacity: 0.72;
+}
+
+.tile-row.failed .row-title {
+  color: var(--danger);
+}
+
+.row-favicon {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  display: grid;
+  place-items: center;
+  border-radius: 4px;
+  background: hsl(var(--hue, 20) 62% 62%);
+  color: #100f0e;
+  font-size: 9.5px;
+  font-weight: 700;
+}
+
+.row-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+/* The tile chrome's container pill, one size down: same partition, same colour
+   language — slate for a persistent jar, amber for an in-memory one. */
+.row-badge {
+  flex: 0 0 auto;
+  max-width: 64px;
+  padding: 0 5px;
+  border-radius: 999px;
+  border: 1px solid rgba(74, 144, 226, 0.45);
+  background: rgba(74, 144, 226, 0.18);
+  color: #b9d3f2;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 13px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.row-badge.temp {
+  border-color: rgba(226, 160, 74, 0.5);
+  background: rgba(226, 160, 74, 0.18);
+  color: #f0d3a6;
+}
+
+.row-close {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--ink-dim);
+  font-size: 10px;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.tile-row:hover .row-close {
+  opacity: 1;
+}
+
+.row-close:hover {
+  background: rgba(226, 96, 74, 0.22);
+  color: #ffb9ad;
+}
+
+/* The container panel's per-row move action: same reveal-on-hover gesture as the
+   close button, because a row is a click target first and a toolbar second. */
+.row-move {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--ink-dim);
+  font-size: 10px;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.tile-row:hover .row-move {
+  opacity: 1;
+}
+
+.row-move:hover {
+  background: rgba(74, 144, 226, 0.22);
+  color: #cfe2fa;
+}
+
+/* Cosmetic filtering shield. Revealed on hover while filtering is on, but left
+   visible — dimmed amber — when the host is paused: the paused state is the one a
+   user has to be able to find again weeks later, and a control that only exists on
+   hover is a control nobody remembers having used. */
+.row-cosmetic {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--ink-dim);
+  font-size: 9px;
+  line-height: 1;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.tile-row:hover .row-cosmetic {
+  opacity: 1;
+}
+
+.row-cosmetic.off {
+  opacity: 0.55;
+  color: #c9a227;
+}
+
+.row-cosmetic:hover {
+  background: rgba(74, 144, 226, 0.22);
+  color: #cfe2fa;
+}
+
+/* ------------------------------------------------------------ containers panel */
+
+.ctr-menu {
+  flex: 0 0 auto;
+  max-height: 46%;
+  overflow: auto;
+  padding: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(0, 0, 0, 0.24);
+}
+
+.ctr-menu[hidden] {
+  display: none;
+}
+
+.ctr-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 4px 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  margin-bottom: 4px;
+}
+
+.ctr-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink-dim);
+  font-size: 10.5px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.ctr-cancel {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--ink-dim);
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.ctr-cancel:hover {
+  background: rgba(255, 255, 255, 0.09);
+  color: var(--ink);
+}
+
+.ctr-line {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.ctr-row {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ctr-row:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.ctr-row:disabled {
+  color: var(--ink-dim);
+  cursor: default;
+}
+
+.ctr-row.current {
+  background: rgba(74, 144, 226, 0.16);
+  color: #cfe2fa;
+}
+
+.ctr-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.ctr-tag {
+  flex: 0 0 auto;
+  padding: 0 5px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: var(--ink-dim);
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 13px;
+  letter-spacing: 0.02em;
+}
+
+.ctr-clear {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink-dim);
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.ctr-clear:hover {
+  background: rgba(226, 96, 74, 0.22);
+  color: #ffb9ad;
+}
+
+/* The confirmation state is a size change, not a second dialog: the button grows
+   to say what the next press will do. */
+.ctr-clear.pending {
+  width: auto;
+  padding: 0 6px;
+  background: rgba(226, 96, 74, 0.26);
+  color: #ffd0c6;
+  font-size: 9.5px;
+  font-weight: 600;
+}
+
+.ctr-empty {
+  margin: 2px 8px 6px;
+  color: var(--ink-dim);
+  font-size: 10.5px;
+}
+
+.ctr-new {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.ctr-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 24px;
+  padding: 0 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 7px;
+  background: rgba(0, 0, 0, 0.45);
+  color: var(--ink);
+  font: inherit;
+  outline: none;
+}
+
+.ctr-input:focus {
+  border-color: var(--accent);
+}
+
+.ctr-go {
+  flex: 0 0 auto;
+  height: 24px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 7px;
+  background: rgba(74, 144, 226, 0.2);
+  color: #cfe2fa;
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.ctr-go:hover {
+  background: rgba(74, 144, 226, 0.32);
+}
+
+/* Layer order. In flow like the container panel — a panel positioned outside the
+   sidebar's 280px rectangle cannot paint, let alone be pressed — and bounded so a
+   crowded canvas cannot push the tile list off the view. */
+.layer-menu {
+  flex: 0 0 auto;
+  max-height: 46%;
+  overflow: auto;
+  padding: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(0, 0, 0, 0.24);
+}
+
+.layer-menu[hidden] {
+  display: none;
+}
+
+/* ------------------------------------------------------- sidebar: bookmarks */
+
+/* The shelf is the layer panel's shape: in flow, bounded, and inside the sidebar's own
+   280px rectangle — a panel positioned outside a native view's bounds cannot paint. */
+.bk-menu {
+  flex: 0 0 auto;
+  max-height: 46%;
+  overflow: auto;
+  padding: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(0, 0, 0, 0.24);
+}
+
+.bk-menu[hidden] {
+  display: none;
+}
+
+.bk-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 6px;
+  border-radius: 7px;
+  cursor: pointer;
+}
+
+.bk-row:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+/* The host is what tells two rows apart when a site reuses its titles, so it gets the
+   leftover width and truncates rather than wrapping. */
+.bk-host {
+  flex: 0 1 auto;
+  max-width: 84px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink-dim);
+  font-size: 9.5px;
+}
+
+.layer-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 4px 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  margin-bottom: 4px;
+}
+
+.layer-title {
+  flex: 0 0 auto;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* Which end of the list is which, because the model stores the other direction. */
+.layer-hint {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--ink-dim);
+  font-size: 9.5px;
+  text-align: right;
+}
+
+.layer-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 6px;
+  border-radius: 7px;
+  cursor: pointer;
+}
+
+.layer-row:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.layer-row.selected {
+  background: rgba(74, 144, 226, 0.16);
+}
+
+.layer-row.selected .row-title {
+  color: #cfe2fa;
+}
+
+/* Fixed width so the numbers line up; `tabular-nums` because they change. */
+.layer-num {
+  flex: 0 0 auto;
+  width: 16px;
+  color: var(--ink-dim);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.layer-move {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink-dim);
+  font-size: 9px;
+  cursor: pointer;
+}
+
+.layer-move:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--ink);
+}
+
+/* Disabled is the honest state: the topmost row cannot be raised further. */
+.layer-move:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.side-foot {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 30px;
+  padding: 0 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  color: var(--ink-dim);
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* -------------------------------------------------------- theme inspector */
+
+/* In flow between the header and the tile list, like the workspace switcher and the
+   container picker: this view is a hard 280px rectangle, so a popover would have
+   nothing to paint into. */
+.theme-panel {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 10px 12px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.theme-panel[hidden] {
+  display: none;
+}
+
+.tp-title {
+  margin: 0;
+  color: var(--ink-dim);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.tp-seg {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.tp-seg-btn {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 3px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--ink-dim);
+  font: inherit;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.tp-seg-btn:hover {
+  background: rgba(255, 255, 255, 0.09);
+  color: var(--ink);
+}
+
+.tp-seg-btn.on {
+  border-color: rgba(74, 144, 226, 0.45);
+  background: rgba(74, 144, 226, 0.22);
+  color: var(--ink);
+}
+
+.tp-slider {
+  display: grid;
+  grid-template-columns: 40px 1fr 28px;
+  align-items: center;
+  gap: 8px;
+}
+
+.tp-label,
+.tp-out {
+  color: var(--ink-dim);
+  font-size: 10px;
+}
+
+.tp-out {
+  color: var(--ink);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.tp-range {
+  width: 100%;
+  height: 14px;
+  accent-color: var(--accent);
+}
+
+/* Inert, not hidden: a slider that would move nothing in `free` mode still has to
+   be visible, or the panel's shape would change under the pointer. */
+.tp-range:disabled {
+  opacity: 0.35;
+}
+
+.tp-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tp-swatch {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tp-chip {
+  display: block;
+  width: 26px;
+  height: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 5px;
+}
+
+.tp-color {
+  width: 26px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 5px;
+  background: none;
+  cursor: pointer;
+}
+
+.tp-hex {
+  width: 68px;
+  padding: 2px 4px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 5px;
+  background: rgba(0, 0, 0, 0.3);
+  color: var(--ink);
+  font: inherit;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.tp-hint {
+  margin: 0;
+  color: var(--ink-dim);
+  font-size: 10px;
+}

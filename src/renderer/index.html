@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:"
+    />
+    <title>Waypoint</title>
+    <link rel="stylesheet" href="./renderer.css" />
+  </head>
+  <body>
+    <div id="canvas" data-role="canvas">
+      <!--
+        Grain sits first so the grid, the frames and the tiles all paint over it. Its
+        SVG is inline: the app has no external assets, and feTurbulence is a one-off
+        raster rather than a per-frame filter because nothing animates it.
+      -->
+      <div id="canvas-grain" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+          <filter id="canvas-grain-noise">
+            <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" stitchTiles="stitch" />
+            <feColorMatrix type="saturate" values="0" />
+          </filter>
+          <rect width="100%" height="100%" filter="url(#canvas-grain-noise)" />
+        </svg>
+      </div>
+      <div id="grid" aria-hidden="true"></div>
+      <div id="frames"></div>
+      <div id="tiles"></div>
+      <div id="hint">
+        <p class="hint-title">Empty canvas</p>
+        <p><kbd>N</kbd> or double-click to open a tile</p>
+        <p class="hint-sub">
+          middle-drag to pan · scroll to zoom · the canvas saves itself
+        </p>
+      </div>
+    </div>
+    <script src="./renderer.js"></script>
+  </body>
+</html>

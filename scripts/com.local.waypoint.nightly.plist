@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Nightly maintenance job for Waypoint.
+
+  This is a TEMPLATE. scripts/install-nightly-agent.sh substitutes the three placeholder values
+  (helper binary, script path, repo path) and writes it to
+  ~/Library/LaunchAgents/com.local.waypoint.nightly.plist. Do not copy it by hand with the
+  placeholders intact: launchd will happily try to run a program path that does not exist and fail
+  with a message nobody reads.
+
+  ProgramArguments points at the signed helper app, not at the script, because a launchd-spawned
+  bare interpreter has no privacy grant for an external volume (EPERM since macOS 26). See
+  scripts/nightly-helper.c.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.local.waypoint.nightly</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>__HELPER_BIN__</string>
+    <string>__SCRIPT__</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>__REPO__</string>
+
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>3</integer>
+    <key>Minute</key>
+    <integer>30</integer>
+  </dict>
+
+  <!-- Both streams to one file: the script writes nothing itself except to stdout/stderr, so this
+       is the single writer and the log is append-only across runs. It lives under ~/Library/Logs,
+       not /tmp, because /tmp is cleared at reboot and the run worth reading is usually the one
+       before it. __LOG__ is substituted by install-nightly-agent.sh: launchd expands neither ~ nor
+       $HOME, so the path has to be absolute here. -->
+  <key>StandardOutPath</key>
+  <string>__LOG__</string>
+  <key>StandardErrorPath</key>
+  <string>__LOG__</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+  </dict>
+
+  <key>ProcessType</key>
+  <string>Background</string>
+  <key>LowPriorityIO</key>
+  <true/>
+  <key>RunAtLoad</key>
+  <false/>
+</dict>
+</plist>

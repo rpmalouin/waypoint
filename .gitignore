@@ -1,0 +1,22 @@
+# dependencies and build output
+node_modules/
+dist/
+out/
+build/
+
+# logs and macOS litter
+*.log
+.DS_Store
+npm-debug.log*
+
+# local state, never part of the app
+.env
+*.local
+
+# agent scratch: design specs and the code-review graph live here, not in the published tree
+.hermes/
+.code-review-graph/
+
+# installed copies are built, not committed
+/Applications/Waypoint.app
+/Applications/WaypointNightly.app

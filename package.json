@@ -1,0 +1,39 @@
+{
+  "name": "waypoint",
+  "productName": "Waypoint",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Zero-telemetry, local-first spatial canvas browser built on native Electron WebContentsViews",
+  "license": "MIT",
+  "author": "Ronald Malouin",
+  "main": "dist/main/index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rpmalouin/waypoint.git"
+  },
+  "bugs": {
+    "url": "https://github.com/rpmalouin/waypoint/issues"
+  },
+  "homepage": "https://github.com/rpmalouin/waypoint#readme",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "node scripts/typecheck.mjs",
+    "test": "node --test tests/*.test.ts",
+    "check": "npm run typecheck && npm run test",
+    "start": "npm run build && electron .",
+    "smoke": "npm run build && D=$(mktemp -d \"${TMPDIR:-/tmp}/wp-smoke.XXXXXX\") && WAYPOINT_SMOKE=1 WAYPOINT_CONFIG_DIR=\"$D/config\" electron . --smoke --user-data-dir=\"$D/user-data\"; s=$?; if [ $s -eq 0 ]; then rm -rf \"$D\"; fi; exit $s",
+    "dev": "node scripts/build.mjs --watch",
+    "package:mac": "npm run build && node scripts/package-mac.mjs",
+    "build:app": "./scripts/build-app.sh"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@electron/packager": "20.3.0",
+    "@types/node": "^24.10.1",
+    "electron": "45.2.1",
+    "esbuild": "^0.25.12",
+    "typescript": "^5.9.3"
+  }
+}

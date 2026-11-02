@@ -152,7 +152,7 @@ case "$MODE" in
   1. Grant the helper access to the external volume, so a launchd run can read the repo:
        System Settings -> Privacy & Security -> Full Disk Access -> + -> Cmd-Shift-G ->
        /Applications -> $HELPER_NAME.app -> enable it.
-       (The narrower service that actually gates /Volumes is Removable Volumes; if this Mac offers
+       (The narrower service that actually gates external volumes is Removable Volumes; if this Mac offers
        it, granting that instead is enough. Full Disk Access also works and is broader.)
 
   2. Load the job - from a plain Terminal, not from inside an agent shell or CI sandbox (those may

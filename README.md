@@ -8,6 +8,8 @@ own, no accounts.
 
 Electron 45 · TypeScript · esbuild · vanilla DOM/CSS.
 
+![Waypoint: three live pages on one spatial canvas](docs/screenshot.jpg)
+
 ## Requirements
 
 - macOS on Apple Silicon (`arm64`). The packaged bundle is arm64 only.
